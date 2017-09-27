@@ -10,7 +10,7 @@ import json
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 def dump(obj, varName):
-    with open(varName +'.js', 'w') as f:
+    with open('data/'+varName +'.js', 'w') as f:
         f.write('var '+varName +'=\n')
         json.dump(obj, f)
 
