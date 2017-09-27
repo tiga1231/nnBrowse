@@ -1,0 +1,198 @@
+<html>
+<head>
+<script src="https://d3js.org/d3.v4.js"></script>
+<script src="x.js"></script>
+<script src="yTrueLabel.js"></script>
+<script src="yPredLabel.js"></script>
+<script src="xProj.js"></script>
+<script src="yProjs.js"></script>
+
+<script src="math.js"></script>
+
+<style>
+svg{
+  background-color: #eee;
+}
+text{
+  pointer-events: none;
+}
+svg#data{
+  position: absolute;
+}
+</style>
+</head>
+<body>
+
+<div>
+<svg id="xProj">
+</svg>
+<svg id="data">
+</svg>
+</div>
+
+<div id='divY'>
+</div>
+
+<script>
+'use strict';
+var width = 350;
+var height = 350;
+
+var ySvgs = ['yProj0', 'yProj1'];
+var svgData = d3.select('#data');
+
+
+function plot(svg, m, x, yPred, yTrue){
+  svg.attr('width', width)
+  .attr('height', height);
+
+  var vmax = d3.max(m, function(d){return Math.max(...d)});
+  var vmin = d3.min(m, function(d){return Math.min(...d)});
+  var sx = d3.scaleLinear().domain([vmin, vmax]).range([20,width-20]);
+  var sy = d3.scaleLinear().domain([vmin, vmax]).range([20,height-20]);
+  var sc = d3.scaleOrdinal(d3.schemeCategory10);
+
+  var point = svg.selectAll('g.point')
+  .data(m).enter()
+  .append('g')
+  .attr('class', 'point');
+
+  point.append('circle')
+  .attr('r', 7)
+  .attr('cx', d => sx(d[0]))
+  .attr('cy', d => sy(d[1]))
+  .attr('fill', (d,i) => sc(yTrue[i]))
+  
+  point.on('mouseover', function(d,j){
+    var p1 = d3.select('#xProj').selectAll('circle')._groups[0][j];
+    
+    d3.select(p1)
+    .attr('stroke-width', 2)
+    .attr('stroke', 'yellow');
+
+    for(var i=0; i<ySvgs.length; i++){
+      var p2 = d3.select('#' + ySvgs[i]).selectAll('circle')._groups[0][j];
+      d3.select(p2)
+      .attr('stroke-width', 2)
+      .attr('stroke', 'yellow');
+    }
+    
+    var s = d3.select('#data');
+    imshow(s, toMatrix(x[j], 28), 5);
+  })
+  .on('mouseout', function(d,j){
+    var p1 = d3.select('#xProj').selectAll('circle')._groups[0][j];
+    d3.select(p1).attr('stroke-width', 0);
+
+    for(var i=0; i<ySvgs.length; i++){
+      var p2 = d3.select('#' + ySvgs[i]).selectAll('circle')._groups[0][j];
+      d3.select(p2)
+      .attr('stroke-width', 0);
+    }
+  });
+
+  point
+  .append('text')
+  .attr('x', d=>sx(d[0]))
+  .attr('y', d=>sy(d[1]))
+  .attr('text-anchor', function(d,i){
+    if(yTrue[i] == yPred[i])
+      return 'middle';
+    else
+      return 'end';
+  })
+  .attr('alignment-baseline', 'central')
+  .attr('fill', 'white')
+  .attr('font-family', 'monospace')
+  .attr('font-size', 10)
+  .text((d,i)=> yTrue[i]);
+
+  point.filter(function(d,i){
+    return yTrue[i] !== yPred[i];
+  }).append('text')
+  .attr('x', d=>sx(d[0]))
+  .attr('y', d=>sy(d[1]))
+  .attr('text-anchor', 'start')
+  .attr('alignment-baseline', 'central')
+  .attr('fill', '#f50')
+  .attr('font-family', 'monospace')
+  .attr('font-size', 10)
+  .text((d,i) => yPred[i]);
+
+}
+
+//data to obj
+function d2o(data0){
+  var data = [];
+  for(var i=0; i<data0.length; i++){
+    for(var j=0; j<data0[0].length; j++){
+      data.push({i:i, j:j, value: data0[i][j]});
+    }
+  }
+  return data;
+}
+
+
+function _imshow(svg, data, ppd){
+  var cols = d3.max(data, function(d){return d.j});
+  var rows = d3.max(data, function(d){return d.i});
+  var w = cols * ppd;
+  var h = rows * ppd;
+  svg.attr('width', w)
+      .attr('height', h);
+  var sx = d3.scaleLinear()
+            .domain([0, cols+1])
+            .range([0, w]);
+  var sy = d3.scaleLinear()
+            .domain([0, rows+1])
+            .range([0, h]);
+  var vmax = d3.max(data, function(d){return Math.abs(d.value)});
+  var sc = d3.scaleLinear()
+            .domain([-vmax, 0, vmax])
+            .range(['#67a9cf','#f7f7f7','#ef8a62']);
+  svg.selectAll('rect').remove();
+  svg.selectAll('rect')
+  .data(data)
+  .enter()
+  .append('rect')
+  .attr('y', function(d){
+    return sy(d.i);
+  })
+  .attr('x', function(d){
+    return sx(d.j);
+  })
+  .attr('height', height/rows)
+  .attr('width', width/cols)
+  .attr('fill', function(d){
+    return sc(d.value);
+  })
+}
+
+
+function imshow(svg, data0, ppd=2){
+  var data = d2o(data0);
+  _imshow(svg, data, ppd);
+}
+
+
+function toMatrix(arr, width) {
+  return arr.reduce(function (rows, key, index) { 
+    return (index % width == 0 ? rows.push([key]) 
+      : rows[rows.length-1].push(key)) && rows;
+  }, []);
+}
+
+
+plot(d3.select('#xProj'), xProj, x, yPredLabel, yTrueLabel);
+
+for(var i=0; i<ySvgs.length; i++){
+  var svg = d3.select('#divY').append('svg').attr('id', ySvgs[i]);
+  plot(svg, yProjs[i], x, yPredLabel, yTrueLabel);
+
+}
+
+imshow(svgData, toMatrix(x[0], 28), 5);
+
+</script>
+</body>
+</html>
