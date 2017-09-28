@@ -3,7 +3,7 @@
 <script src="https://d3js.org/d3.v4.js"></script>
 <script src="data/x.js"></script>
 <script src="data/yTrueLabel.js"></script>
-<script src="data/yPredLabel.js"></script>
+<script src="data/yPredLabels.js"></script>
 <script src="data/xProj.js"></script>
 <script src="data/yProjs.js"></script>
 
@@ -13,11 +13,23 @@
 svg{
   background-color: #eee;
 }
+
+svg text {
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
+}
+svg text::selection {
+    background: none;
+}
+
 text{
   pointer-events: none;
 }
 svg#data{
-  position: absolute;
+  left: 0;
+  top: 0;
 }
 </style>
 </head>
@@ -38,8 +50,12 @@ svg#data{
 var width = 350;
 var height = 350;
 
-var ySvgs = ['yProj0', 'yProj1'];
-var svgs = ['xProj', 'yProj0', 'yProj1'];
+var ySvgs = d3.range(yPredLabels.length).map(
+  function(d){
+    return 'yProj' + d;
+  });
+var svgs = ySvgs.slice();
+svgs.unshift('xProj');
 
 var svgData = d3.select('#data');
 
@@ -70,6 +86,7 @@ function plot(svg, m, x, yPred, yTrue){
   //hover event
   point
   .on('mouseover', function(d,j){
+    console.log(yTrue[j], yPred[j]);
     var p1 = d3.select('#xProj').selectAll('circle')._groups[0][j];
     d3.select(p1)
     .attr('stroke-width', 2)
@@ -110,18 +127,23 @@ function plot(svg, m, x, yPred, yTrue){
   .attr('font-size', 10)
   .text((d,i)=> yTrue[i]);
 
-  point.filter(function(d,i){
-    return yTrue[i] !== yPred[i];
-  }).append('text')
-  .attr('x', d=>sx(d[0]))
-  .attr('y', d=>sy(d[1]))
-  .attr('text-anchor', 'start')
-  .attr('alignment-baseline', 'central')
-  .attr('fill', '#f50')
-  .attr('font-family', 'monospace')
-  .attr('font-size', 10)
-  .text((d,i) => yPred[i]);
-
+  
+  point.each(function(d,i){
+    if(yTrue[i] !== yPred[i]){
+    
+      d3.select(this)
+      .append('text')
+      .attr('x', d=>sx(d[0]))
+      .attr('y', d=>sy(d[1]))
+      .attr('text-anchor', 'start')
+      .attr('alignment-baseline', 'central')
+      .attr('fill', 'yellow')
+      .attr('font-family', 'monospace')
+      .attr('font-size', 10)
+      .text((d) => yPred[i])
+    }
+  });
+  
   function brushed(){
     var sel = d3.event.selection;
     if(sel){
@@ -234,10 +256,10 @@ function toMatrix(arr, width) {
 }
 
 
-plot(d3.select('#xProj'), xProj, x, yPredLabel, yTrueLabel);
+plot(d3.select('#xProj'), xProj, x, yPredLabels[yPredLabels.length-1], yTrueLabel);
 for(var i=0; i<ySvgs.length; i++){
   var svg = d3.select('#divY').append('svg').attr('id', ySvgs[i]);
-  plot(svg, yProjs[i], x, yPredLabel, yTrueLabel);
+  plot(svg, yProjs[i], x, yPredLabels[i], yTrueLabel);
 
 }
 

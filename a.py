@@ -29,16 +29,16 @@ sess = tf.InteractiveSession()
 tf.global_variables_initializer().run()
 
 
-bb_xs, bb_ys = mnist.test.next_batch(100)
+bb_xs, bb_ys = mnist.test.next_batch(120)
 yTrue = np.argmax(bb_ys, axis=1)
 dump(bb_xs.tolist(), 'x')
 dump(yTrue.tolist(), 'yTrueLabel')
 
 
 kl = 500
-perplexity = 25
-
-for i in range(10):
+perplexity = 20
+trialCount = 20
+for i in range(trialCount):
     model = TSNE(perplexity=perplexity)
     xProj_i = model.fit_transform(bb_xs)
     if model.kl_divergence_ < kl:
@@ -47,25 +47,29 @@ for i in range(10):
         print i, model.kl_divergence_
     else:
         print i
+#model = PCA()
+#xProj = model.fit_transform(bb_xs)
 dump(xProj.tolist(), 'xProj')
 
 yProjs = []
-for sub,r in enumerate([0, 1000, ]):
+yPredLabels = []
+for sub,r in enumerate([500,500]):
     for _ in range(r):
         batch_xs, batch_ys = mnist.train.next_batch(100)
         sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
 
     correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-    print(sess.run(accuracy, feed_dict={x: mnist.test.images, y_: mnist.test.labels}))
+    print sess.run( accuracy,
+    feed_dict={ x: mnist.test.images, y_: mnist.test.labels})
+
     #viz y
     yPred = sess.run(y, feed_dict={x: bb_xs, y_: bb_ys})
     yPredLabel = np.argmax(yPred, axis=1)
-    #dump(yPred.tolist(), 'yPred')
-    dump(yPredLabel.tolist(), 'yPredLabel')
+    yPredLabels.append(yPredLabel.tolist())
 
     kl = 500
-    for i in range(10):
+    for i in range(trialCount):
         model = TSNE(perplexity=perplexity)
         yProj_i = model.fit_transform(yPred)
         if model.kl_divergence_ < kl:
@@ -74,15 +78,9 @@ for sub,r in enumerate([0, 1000, ]):
             print i, model.kl_divergence_
         else:
             print i
+    #model = PCA()
+    #yProj = model.fit_transform(yPred)
     yProjs.append(yProj.tolist())
-
-    plt.subplot(2,2,sub+1)
-    plt.scatter(yProj[:,0], yProj[:,1], c=yTrue, cmap='tab10', alpha=1)
-    plt.xticks([])
-    plt.yticks([])
-    plt.axis('equal')
-    for i in range(len(yTrue)):
-        plt.text(yProj[i,0], yProj[i,1], 
-        yTrue[i], ha='center', va='center')
-    dump(yProjs, 'yProjs')
+dump(yProjs, 'yProjs')
+dump(yPredLabels, 'yPredLabels')
 #plt.show()
