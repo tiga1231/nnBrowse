@@ -10,6 +10,10 @@
 <script src="lib/math.js"></script>
 
 <style>
+body{
+  margin: 0;
+  padding: 0;
+}
 svg{
   background-color: #eee;
 }
@@ -19,18 +23,12 @@ svg text {
        -moz-user-select: none;
         -ms-user-select: none;
             user-select: none;
+         pointer-events: none;
 }
 svg text::selection {
     background: none;
 }
 
-text{
-  pointer-events: none;
-}
-svg#data{
-  left: 0;
-  top: 0;
-}
 </style>
 </head>
 <body>
@@ -86,7 +84,6 @@ function plot(svg, m, x, yPred, yTrue){
   //hover event
   point
   .on('mouseover', function(d,j){
-    console.log(yTrue[j], yPred[j]);
     var p1 = d3.select('#xProj').selectAll('circle')._groups[0][j];
     d3.select(p1)
     .attr('stroke-width', 2)
@@ -109,6 +106,7 @@ function plot(svg, m, x, yPred, yTrue){
       .attr('stroke-width', 0);
     }
   });
+
 
   //text on points
   point
@@ -256,7 +254,7 @@ function toMatrix(arr, width) {
 }
 
 
-plot(d3.select('#xProj'), xProj, x, yPredLabels[yPredLabels.length-1], yTrueLabel);
+plot(d3.select('#xProj'), xProj, x, yTrueLabel, yTrueLabel);
 for(var i=0; i<ySvgs.length; i++){
   var svg = d3.select('#divY').append('svg').attr('id', ySvgs[i]);
   plot(svg, yProjs[i], x, yPredLabels[i], yTrueLabel);
