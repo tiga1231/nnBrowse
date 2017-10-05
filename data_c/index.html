@@ -511,12 +511,7 @@ dots
 })
 .append('text')
 .text(function(d,i){return i})
-.attr('fill', function(d,i){
-  if(dd.y[instance][i]> 0.1){
-    return 'black';
-  }
-  return 'white';
-})
+.attr('fill', '#aaa')
 .attr('text-anchor', 'middle')
 .attr('alignment-baseline', 'middle');
 
@@ -532,7 +527,7 @@ d3.select('#instances')
 })
 .on('click', function(d,i){
   instance = i;
-  
+
   var x = computeX();
   nodes.update([x,dd.y[i]]);
   drawNodesUpdate(svg, nodes, sc1);
