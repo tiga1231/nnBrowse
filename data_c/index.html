@@ -1,0 +1,558 @@
+<html>
+<head>
+<script src="https://d3js.org/d3.v4.js"></script>
+<script src="math.js"></script>
+<script src="data.js"></script>
+
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
+
+
+<style>
+h1{
+  font-size: 20px;
+  margin-left: 150px;
+}
+
+button{
+  margin: 5px;
+}
+
+
+li{
+  text-decoration: underline;
+  font-size: 20px;
+}
+
+svg{
+  background-color: #888;
+}
+
+svg text {
+    -webkit-user-select: none;
+       -moz-user-select: none;
+        -ms-user-select: none;
+            user-select: none;
+         pointer-events: none;
+}
+svg text::selection {
+    background: none;
+}
+
+svg path{
+  stroke-linecap: round;
+  pointer-events: none;
+}
+
+#info{
+  margin-left: 20px;
+}
+
+#instances{
+  position: absolute;
+  top: 60px;
+  overflow-y: scroll;
+  height: 650px;
+}
+
+
+
+</style>
+</head>
+<body>
+<div id='control'>
+  <div id='d_instances'>
+    <ul id='instances'>
+    </ul>
+  </div>
+  <div>
+    <span id='info'>training step# <span id='step'></span></span>
+    <button class='btn btn-default btn-round' onclick='stepUpdate(-step)'>|&lt;</button>
+    <button class='btn btn-default btn-round' onclick='stepUpdate(-5)'>&lt;&lt;</button>
+    <button class='btn btn-default btn-round' onclick='stepUpdate(-1)'>&lt; back</button>
+    <!--button class='btn btn-default btn-primary' onclick='play()'>play</button-->
+    <button class='btn btn-default btn-round' onclick='stepUpdate()'>step &gt;</button>
+    <button class='btn btn-default btn-round' onclick='stepUpdate(5)'>&gt;&gt;</button>
+    <button class='btn btn-default btn-round' onclick='stepUpdate(-step-1)'>&gt;|</button>
+    
+  </div>
+</div>
+<div id='main'>
+</div>
+
+<script>
+'use strict';
+var width = 350;
+var height = 350;
+//data to obj
+function d2o(data0){
+  var data = [];
+  for(var i=0; i<data0.length; i++){
+    for(var j=0; j<data0[0].length; j++){
+      data.push({i:i, j:j, value: data0[i][j]});
+    }
+  }
+  return data;
+}
+
+
+function imshow(svg, data0, ppd, vmax){
+  var data = d2o(data0);
+  var cols = d3.max(data, function(d){return d.j});
+  var rows = d3.max(data, function(d){return d.i});
+  var w = cols * ppd;
+  var h = rows * ppd;
+
+  debugger;
+  svg.attr('width', w)
+      .attr('height', h);
+  var sx = d3.scaleLinear()
+            .domain([0, cols+1])
+            .range([0, w]);
+  var sy = d3.scaleLinear()
+            .domain([0, rows+1])
+            .range([0, h]);
+
+  svg.selectAll('rect')
+  .data(data)
+  .enter()
+  .append('rect')
+  .attr('y', function(d){
+    return sy(d.i);
+  })
+  .attr('x', function(d){
+    return sx(d.j);
+  })
+  .attr('height', height/rows)
+  .attr('width', width/cols);
+
+}
+
+function imupdate(svgs, data, vmax=1){
+  var sc = d3.scaleLinear()
+            .domain([-vmax, 0, vmax])
+            .range(['#5e3c99', '#f7f7f7', '#e66101']);
+
+  var rect = svgs
+  .data(data)
+  .selectAll('rect');
+
+  rect
+  .data(function(d){
+    return d2o(d);
+  })
+  .transition()
+  .attr('fill', function(d){ 
+    return sc(d.value);
+  });
+  
+
+}
+
+/*
+function reshape(arr, width) {
+  return arr.reduce(function (rows, key, index) { 
+    return (index % width == 0 ? rows.push([key]) 
+      : rows[rows.length-1].push(key)) && rows;
+  }, []);
+}*/
+
+/*
+//var vmax = math.max(ws);
+var vmax = 0.1;
+var svg;
+var div;
+//create initial
+for(var i=0; i<10; i++){
+  if (i%5==0){
+    div = d3.select('#main').append('div');
+  }
+  svg = div.append('svg');
+  imshow(svg, ws[0][i], 1, vmax);
+}*/
+
+function computeX(){
+
+  var w = computeWeights(dd.x[instance], dd.W['layer0'+'_t'+step]);
+  w = math.matrix(w);
+  //w = math.mean(w, 0);
+  var soft1 = dd.y[instance].map(soft);
+  soft1 = math.matrix([soft1]);
+
+  var x = math.multiply(soft1,w);
+  x = x._data[0];
+  return x;
+}
+
+var step = -1;
+function stepUpdate(stride=1){
+  var s = dd.stepCount;
+  step = (step+stride)>=0?(step+stride)%s: (step+stride)%s+s;
+  d3.select('#step').text((step+1) + '/' + dd.stepCount);
+
+  var x = computeX();
+
+  nodes.update([x,dd.y[instance]]);
+
+  var vmax = d3.max(x, function(d){return Math.abs(d);});
+  drawNodesUpdate(svg, nodes, sc1);
+
+  var w = computeWeights(dd.x[instance], dd.W['layer0_t'+step]);
+  links.update([w, ]);
+  drawLinksUpdate(svg, links, curveF, scw);
+
+  return step;
+}
+
+
+function Curve(sx, sy){
+  function d(o){
+    var res = '';
+    var f = 0.5;
+    res += 'M ' + sx(o.source.x) + ' ' +sy(o.source.y) ;
+    res += ' C ' + sx(o.source.x+f*(o.target.x-o.source.x)) 
+            + ' ' +sy(o.source.y) + ', ';
+
+    res += sx( o.target.x-f*(o.target.x-o.source.x) ) 
+    +' ' +sy(o.target.y) + ', ';
+    res += sx(o.target.x) + ' ' +sy(o.target.y);
+    return res;
+  }
+  return d;
+}
+
+
+function createNodes(grid, values){
+  var nodes = [];
+  for(var i=0; i<grid.length; i++){
+    //node index
+    for(var j=0; j<grid[i]; j++){
+        var d = {
+          layer:i,
+          node:j,
+          total: grid[i],
+          value: values? values[i][j]:99
+        }
+        nodes.push(d);
+    }
+  }
+  nodes.update = function(values){
+    for(var i=0; i<nodes.length; i++){
+      nodes[i].value = values? values[nodes[i].layer][nodes[i].node]:99;
+    }
+  }
+  return nodes;
+}
+
+
+function createLinks(nodes, weights){
+  var links = [];
+  var nodes0 = nodes.filter(function(d){return d.layer == 0});
+  for(var i=0; i<d3.max(nodes, function(d){return d.layer}); i++){
+    var nodes1 = nodes.filter(function(d){return d.layer == i+1});
+    for(var k=0; k<nodes0.length; k++){
+      for(var j=0; j<nodes1.length; j++){
+        var d = {layer: i+0.5,
+                node0: nodes0[k],
+                node1: nodes1[j],
+                value: weights? weights[i][j][k] : 999
+              };
+        links.push(d);
+      }
+    }
+    nodes0 = nodes1;
+  }
+
+  links.update = function(weights){
+    for(var i=0; i<links.length; i++){
+      links[i].value = weights?
+      weights[Math.floor(links[i].layer)]
+              [links[i].node1.node]
+              [links[i].node0.node]
+      :999;
+    }
+  }
+  return links;
+}
+
+
+function createNodeLayout(nodes0, cols, bounds){
+  var L = d3.max(nodes0, function(d){return d.layer;}) + 1;
+  //var DW = 1/(L+1);
+  nodes = nodes0.map(function(d){
+    var l = d.layer;
+    var box = bounds[l];
+    var c = cols[l];
+    var dh = (box.down - box.up)/ ((d.total-1)/c);
+    var dw = c<=1 ? 1: (box.right - box.left) / (c-1);
+    d.x = box.left + dw*(d.node%c);
+    d.y = box.up + dh * Math.floor(d.node/c);
+    d.dy = dh;
+    d.dx = dw;
+    return d;
+  });
+  nodes.update = nodes0.update;
+  return nodes;
+}
+
+
+function createLinkLayout(links0, bounds){
+
+  links = links0.map(function(d){
+      d.source = {x:d.node0.x, y:d.node0.y};
+      d.target = {x:d.node1.x, y:d.node1.y};
+      return d;
+  });
+  links.update = links0.update;
+  return links;
+}
+
+
+function drawLinks(svg, links, curveFunc, sc){
+  var paths = svg
+    .selectAll('.curve')
+    .data(links)
+    .enter()
+    .append('path')
+    .attr('class', 'curve')
+    .attr('fill', 'none')
+    .attr('stroke', function(d){
+      return sc(d.value);
+    })
+    .attr('stroke-width', 1)
+    .attr('opacity', opa)
+    .attr('d', curveFunc);
+  return paths;
+}
+
+var nodeSelected = {layer:-1, node:-1};
+function drawNodes(svg, nodes, sx, sy, sc){
+  var dots = svg.selectAll('.dot')
+  .data(nodes)
+  .enter()
+  .append('g')
+  .attr('class', 'dot')
+  .attr('transform', function(d){
+    return 'translate(' + sx(d.x) + ','+sy(d.y) + ')';
+  });
+
+  dots
+  .append('circle')
+  .attr('r', function(d){return sy(Math.min(d.dy,d.dx)/2 *1.1);})
+  .attr('stroke', 'yellow')
+  .attr('stroke-width', 0)
+  .attr('fill', function(d){
+    return sc(d.value);
+  });
+
+
+  dots
+  .on('mouseover', function(d,i){
+    svg.selectAll('circle')
+    .attr('stroke-width', 0);
+    d3.select(this)
+    .select('circle')
+    .attr('stroke-width', 2);
+
+    svg.selectAll('path.curve')
+    .attr('opacity', function(e){
+      var i1 = Math.ceil(e.layer) == d.layer && e.node1.node == d.node;
+      var i2 = Math.floor(e.layer) == d.layer && e.node0.node == d.node;
+      return (i1 || i2) ? opa(e):OPA0;
+    });
+
+
+    //draw weights on pre layer
+    if (d.layer-1 >= 0){
+      var w = computeWeights(dd.x[instance], dd.W['layer'+ (d.layer-1)+'_t'+step]);
+      var vmax = d3.max(w[d.node], function(d){return Math.abs(d);});
+      svg.selectAll('.dot')
+      .filter(function(e,j){
+        return e.layer == d.layer-1;
+      })
+      .selectAll('circle')
+      .attr('fill', function(e){
+        return sc1(w[d.node][e.node]);
+      });
+    }
+
+  });
+
+  dots
+  .on('mouseout', function(d,i){
+    svg.selectAll('circle')
+    .attr('stroke-width', 0);
+    
+    svg.selectAll('path.curve')
+    .attr('opacity', opa);
+
+    //restore prev layer representation
+    if (d.layer-1 >= 0){
+      svg.selectAll('.dot')
+      .filter(function(e,j){
+        return e.layer == d.layer-1;
+      })
+      .selectAll('circle')
+      .attr('fill', function(e){
+        //return sc(e.value);
+        var w = computeWeights(dd.x[instance], dd.W['layer'+ (d.layer-1)+'_t'+step]);
+        w = math.matrix(w);
+        //w = math.mean(w, 0);
+        var s = dd.y[instance].map(soft);
+        s = math.matrix([s]);
+
+        w = math.multiply(s,w);
+        w = w._data[0];
+        //debugger;
+        var vmax = d3.max(w, function(d){return Math.abs(d);});
+        return sc1(w[e.node]);
+      });
+    }
+
+  });
+
+  return dots;
+}
+
+function soft(x){
+  return Math.exp(x);
+}
+function drawNodesUpdate(svg, nodes, sc){
+  var dots = svg
+    .selectAll('.dot')
+    .data(nodes)
+    .selectAll('circle')
+    .attr('fill', function(d){
+      return sc(d.value);
+    });
+  return dots;
+}
+
+function drawLinksUpdate(svg, links, curveFunc, sc){
+  var paths = svg
+    .selectAll('path.curve')
+    .data(links)
+    .transition()
+    .duration(250)
+    .attr('stroke', function(d){
+      return sc(d.value);
+    })
+    .attr('opacity', opa);
+  return paths;
+}
+
+
+function computeWeights(x, w){
+  var x = math.matrix([ x ]);//make a row matrix;
+  var w = math.matrix(w);
+  x = math.multiply(math.transpose(math.matrix([[1,1,1,1,1,1,1,1,1,1]])), x);
+  w = math.dotMultiply(w, x)._data;
+  return w;
+}
+
+
+
+var w = 700;
+var h = 700;
+var svg = d3.select('#main')
+.append('svg')
+.attr('width', w)
+.attr('height', h);
+
+var colorW = ['#5e3c99', '#444', '#e66101'];
+var sx = d3.scaleLinear().domain([0,1]).range([0,w]);
+var sy = d3.scaleLinear().domain([0,1]).range([0,h]);
+var scw = d3.scaleLinear().domain([-0.1, 0, 0.1]).range(colorW);
+var scx = d3.scaleLinear().domain([0, 1]).range(['#111', '#eee']);
+var sc1 = d3.scaleLinear().domain([-0.1,0,0.1]).range(colorW);
+var instance = 0;
+
+
+var TH = 0.02;
+var OPA1 = 0.5;
+var OPA0 = 0.0;
+var opa0 = function(d){
+  return Math.abs(d.value) > TH? OPA1:OPA0;
+};
+
+var opa = function(d){
+  return Math.abs(d.value)*6;
+};
+var curveF = new Curve(sx, sy);
+
+var grid = [28*28,10];
+var bounds = [
+  {up:0.4,down:0.6, left: 0.2, right:0.4}, 
+  {up:0.1,down:0.9, left: 0.6, right:0.7},
+];
+
+var nodes = createNodes(grid, [dd.x[0], dd.y[0]]);
+
+var wInit = computeWeights(dd.x[0], dd.W['layer0_t0']);
+var links = createLinks(nodes, [wInit, ]);
+
+nodes = createNodeLayout(nodes, [28, 1], bounds);
+links = createLinkLayout(links, bounds);
+
+var paths = drawLinks(svg, links, curveF, scw);
+var dots = drawNodes(svg, nodes, sx, sy, scx);
+
+
+//links.update([dd.W['layer0_t0'],]);
+drawLinksUpdate(svg, links, curveF, scw);
+
+
+dots
+.filter(function(d){
+  return d.layer == 1;
+})
+.append('text')
+.text(function(d,i){return i})
+.attr('fill', function(d,i){
+  if(dd.y[instance][i]> 0.1){
+    return 'black';
+  }
+  return 'white';
+})
+.attr('text-anchor', 'middle')
+.attr('alignment-baseline', 'middle');
+
+d3.select('#instances')
+.selectAll('li')
+.data(dd.labelTrue)
+.enter()
+.append('li')
+.text(function(d,i){
+  var res = d==dd.labelPred[i]? 
+    d:d+' | '+dd.labelPred[i];
+  return res;
+})
+.on('click', function(d,i){
+  instance = i;
+  
+  var x = computeX();
+  nodes.update([x,dd.y[i]]);
+  drawNodesUpdate(svg, nodes, sc1);
+
+  //compute the links
+  var w = computeWeights(dd.x[i], dd.W['layer0_t'+step]);
+  links.update([w, ]);
+  drawLinksUpdate(svg, links, curveF, scw);
+
+  d3.selectAll('li').style('color', 'black');
+  d3.select(this).style('color', 'red');
+
+  
+});
+stepUpdate();
+
+function play(){
+  for(var i=0; i<dd.stepCount-step-1; i++)
+    setTimeout(stepUpdate, 500*i);
+}
+</script>
+</body>
+</html>

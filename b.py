@@ -9,15 +9,23 @@ import json
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
+dataFn = 'data_c/data.js'
+try:
+    os.remove(dataFn)
+except:
+    pass
+with open(dataFn, 'a') as f:
+    f.write('var dd = {};\n')
+
+
 def dump(obj, varName):
-    with open('data_b/data.js', 'a') as f:
-        f.write('var '+varName +'=\n')
+    with open(dataFn, 'a') as f:
+        f.write('dd.'+varName +'=\n')
         json.dump(obj, f)
-        f.write('\n')
+        f.write(';\n')
 
 
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
-#a = mnist.train.images[0]
 x = tf.placeholder(tf.float32, [None, 784])
 W = tf.Variable(tf.zeros([784, 10]))
 b = tf.Variable(tf.zeros([10]))
@@ -29,24 +37,25 @@ train_step = tf.train.GradientDescentOptimizer(0.5).minimize(cross_entropy)
 sess = tf.InteractiveSession()
 tf.global_variables_initializer().run()
 
-
-m = []
-for sub,r in enumerate([100,]*2):
-    for _ in range(r):
+m = {}
+for i,d in enumerate([10,]*30):
+    for _ in range(d):
         batch_xs, batch_ys = mnist.train.next_batch(100)
         sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
-    wi = sess.run(W)
-    m.append(wi.tolist())
-dump(m, 'ws')
+    wi = sess.run(W).T
+#a = mnist.train.images[0]
+    m['layer0_t'+str(i)] = wi.tolist()
+dump(m, 'W')
+dump(i+1, 'stepCount')
 
 xs, yTrue = mnist.train.next_batch(200)
 yTrueLabel = np.argmax(yTrue, axis=1)
 yPred = sess.run(y, feed_dict={x: xs})
 yPredLabel = np.argmax(yPred, axis=1)
 dump(xs.tolist(), 'x')
-dump(yTrueLabel.tolist(), 'yTrueLabel')
-dump(yPredLabel.tolist(), 'yPredLabel')
-dump(yPred.tolist(), 'yPred')
-    #correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
-    #accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+dump(yTrueLabel.tolist(), 'labelTrue')
+dump(yPredLabel.tolist(), 'labelPred')
+dump(yPred.tolist(), 'y')
+#correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
+#accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
