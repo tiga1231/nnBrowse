@@ -55,6 +55,7 @@ yPredLabel = np.argmax(yPred, axis=1)
 dump(xs.tolist(), 'x')
 dump(yTrueLabel.tolist(), 'labelTrue')
 dump(yPredLabel.tolist(), 'labelPred')
+#TODO make yPred vary in time
 dump(yPred.tolist(), 'y')
 #correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
 #accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))

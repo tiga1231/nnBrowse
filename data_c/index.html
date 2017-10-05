@@ -174,17 +174,24 @@ for(var i=0; i<10; i++){
   imshow(svg, ws[0][i], 1, vmax);
 }*/
 
+
 function computeX(){
+  if (dd.cache.x['i'+instance + '_t' + step]){
+    console.log('using cache');
+    return dd.cache.x['i'+instance + '_t' + step];
+  }else{
+    var w = computeW(dd.x[instance], dd.W['layer0'+'_t'+step]);
+    w = math.matrix(w);
+    //w = math.mean(w, 0);
+    var soft1 = dd.y[instance].map(soft);
+    soft1 = math.matrix([soft1]);
 
-  var w = computeWeights(dd.x[instance], dd.W['layer0'+'_t'+step]);
-  w = math.matrix(w);
-  //w = math.mean(w, 0);
-  var soft1 = dd.y[instance].map(soft);
-  soft1 = math.matrix([soft1]);
-
-  var x = math.multiply(soft1,w);
-  x = x._data[0];
-  return x;
+    var x = math.multiply(soft1,w);
+    x = x._data[0];
+    dd.cache.x['i'+instance + '_t' + step] = x;
+    console.log('cahced');
+    return x;
+  }
 }
 
 var step = -1;
@@ -200,7 +207,7 @@ function stepUpdate(stride=1){
   var vmax = d3.max(x, function(d){return Math.abs(d);});
   drawNodesUpdate(svg, nodes, sc1);
 
-  var w = computeWeights(dd.x[instance], dd.W['layer0_t'+step]);
+  var w = computeW(dd.x[instance], dd.W['layer0_t'+step]);
   links.update([w, ]);
   drawLinksUpdate(svg, links, curveF, scw);
 
@@ -367,7 +374,7 @@ function drawNodes(svg, nodes, sx, sy, sc){
 
     //draw weights on pre layer
     if (d.layer-1 >= 0){
-      var w = computeWeights(dd.x[instance], dd.W['layer'+ (d.layer-1)+'_t'+step]);
+      var w = computeW(dd.x[instance], dd.W['layer'+ (d.layer-1)+'_t'+step]);
       var vmax = d3.max(w[d.node], function(d){return Math.abs(d);});
       svg.selectAll('.dot')
       .filter(function(e,j){
@@ -398,17 +405,15 @@ function drawNodes(svg, nodes, sx, sy, sc){
       .selectAll('circle')
       .attr('fill', function(e){
         //return sc(e.value);
-        var w = computeWeights(dd.x[instance], dd.W['layer'+ (d.layer-1)+'_t'+step]);
-        w = math.matrix(w);
-        //w = math.mean(w, 0);
-        var s = dd.y[instance].map(soft);
-        s = math.matrix([s]);
-
-        w = math.multiply(s,w);
-        w = w._data[0];
-        //debugger;
-        var vmax = d3.max(w, function(d){return Math.abs(d);});
-        return sc1(w[e.node]);
+        var w = computeW(dd.x[instance], dd.W['layer'+ (d.layer-1)+'_t'+step]);
+        var wx = computeWX(w);
+        if(dd.cache.vmax['l0_i'+instance+'_t'+step]){
+          var vmax = dd.cache.vmax['l0_i'+instance+'_t'+step];
+        }else{
+          var vmax = d3.max(wx, function(d){return Math.abs(d);});
+          dd.cache.vmax['l0_i'+instance+'_t'+step] = vmax;
+        }
+        return sc1(wx[e.node]);
       });
     }
 
@@ -417,25 +422,45 @@ function drawNodes(svg, nodes, sx, sy, sc){
   return dots;
 }
 
+
+function computeWX(w){
+  if(dd.cache.wx['l0_i'+instance+'_t'+step]){
+    return dd.cache.wx['l0_i'+instance+'_t'+step];
+  }else{
+    w = math.matrix(w);
+    var s = dd.y[instance].map(soft);
+    s = math.matrix([s]);
+    var wx = math.multiply(s,w);
+    wx = w._data[0];
+    dd.cache.wx['l0_i'+instance+'_t'+step] = wx;
+    return wx;
+  }
+}
+
 function soft(x){
   return Math.exp(x);
 }
-function drawNodesUpdate(svg, nodes, sc){
+function drawNodesUpdate(svg, nodes, sc, dur=0, delay=0){
+
   var dots = svg
     .selectAll('.dot')
     .data(nodes)
     .selectAll('circle')
+    .transition()
+    .delay(delay)
+    .duration(dur)
     .attr('fill', function(d){
       return sc(d.value);
     });
   return dots;
 }
 
-function drawLinksUpdate(svg, links, curveFunc, sc){
+function drawLinksUpdate(svg, links, curveFunc, sc, delay=0){
   var paths = svg
     .selectAll('path.curve')
     .data(links)
     .transition()
+    .delay(delay)
     .duration(250)
     .attr('stroke', function(d){
       return sc(d.value);
@@ -445,12 +470,17 @@ function drawLinksUpdate(svg, links, curveFunc, sc){
 }
 
 
-function computeWeights(x, w){
-  var x = math.matrix([ x ]);//make a row matrix;
-  var w = math.matrix(w);
-  x = math.multiply(math.transpose(math.matrix([[1,1,1,1,1,1,1,1,1,1]])), x);
-  w = math.dotMultiply(w, x)._data;
-  return w;
+function computeW(x, w){
+  if(dd.cache.w['l0_i'+instance+'_t'+step]){
+    return dd.cache.w['l0_i'+instance+'_t'+step];
+  }else{
+    var x = math.matrix([ x ]);//make a row matrix;
+    var w = math.matrix(w);
+    x = math.multiply(math.transpose(math.matrix([[1,1,1,1,1,1,1,1,1,1]])), x);
+    w = math.dotMultiply(w, x)._data;
+    dd.cache.w['l0_i'+instance+'_t'+step] = w;
+    return w;
+  }
 }
 
 
@@ -462,13 +492,21 @@ var svg = d3.select('#main')
 .attr('width', w)
 .attr('height', h);
 
+dd.cache = {};
+dd.cache.x = {};
+dd.cache.w = {};
+dd.cache.w = {};
+dd.cache.wx = {};
+dd.cache.vmax = {}
+
+var instance = 0;
+
 var colorW = ['#5e3c99', '#444', '#e66101'];
 var sx = d3.scaleLinear().domain([0,1]).range([0,w]);
 var sy = d3.scaleLinear().domain([0,1]).range([0,h]);
 var scw = d3.scaleLinear().domain([-0.1, 0, 0.1]).range(colorW);
 var scx = d3.scaleLinear().domain([0, 1]).range(['#111', '#eee']);
 var sc1 = d3.scaleLinear().domain([-0.1,0,0.1]).range(colorW);
-var instance = 0;
 
 
 var TH = 0.02;
@@ -491,7 +529,7 @@ var bounds = [
 
 var nodes = createNodes(grid, [dd.x[0], dd.y[0]]);
 
-var wInit = computeWeights(dd.x[0], dd.W['layer0_t0']);
+var wInit = computeW(dd.x[0], dd.W['layer0_t0']);
 var links = createLinks(nodes, [wInit, ]);
 
 nodes = createNodeLayout(nodes, [28, 1], bounds);
@@ -528,14 +566,17 @@ d3.select('#instances')
 .on('click', function(d,i){
   instance = i;
 
+  nodes.update([dd.x[i],dd.y[i]]);
+  drawNodesUpdate(svg, nodes, scx);
+
   var x = computeX();
   nodes.update([x,dd.y[i]]);
-  drawNodesUpdate(svg, nodes, sc1);
+  drawNodesUpdate(svg, nodes, sc1, 300, 1000);
 
   //compute the links
-  var w = computeWeights(dd.x[i], dd.W['layer0_t'+step]);
+  var w = computeW(dd.x[i], dd.W['layer0_t'+step]);
   links.update([w, ]);
-  drawLinksUpdate(svg, links, curveF, scw);
+  drawLinksUpdate(svg, links, curveF, scw, 500);
 
   d3.selectAll('li').style('color', 'black');
   d3.select(this).style('color', 'red');
