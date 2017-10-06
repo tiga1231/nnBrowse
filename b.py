@@ -38,7 +38,7 @@ sess = tf.InteractiveSession()
 tf.global_variables_initializer().run()
 
 m = {}
-for i,d in enumerate([10,]*30):
+for i,d in enumerate([10,]*10):
     for _ in range(d):
         batch_xs, batch_ys = mnist.train.next_batch(100)
         sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
@@ -48,7 +48,7 @@ for i,d in enumerate([10,]*30):
 dump(m, 'W')
 dump(i+1, 'stepCount')
 
-xs, yTrue = mnist.train.next_batch(200)
+xs, yTrue = mnist.test.next_batch(50)
 yTrueLabel = np.argmax(yTrue, axis=1)
 yPred = sess.run(y, feed_dict={x: xs})
 yPredLabel = np.argmax(yPred, axis=1)

@@ -69,7 +69,6 @@ svg path{
     </ul>
   </div>
   <div>
-    <span id='info'>training step# <span id='step'></span></span>
     <button class='btn btn-default btn-round' onclick='stepUpdate(-step)'>|&lt;</button>
     <button class='btn btn-default btn-round' onclick='stepUpdate(-5)'>&lt;&lt;</button>
     <button class='btn btn-default btn-round' onclick='stepUpdate(-1)'>&lt; back</button>
@@ -77,6 +76,8 @@ svg path{
     <button class='btn btn-default btn-round' onclick='stepUpdate()'>step &gt;</button>
     <button class='btn btn-default btn-round' onclick='stepUpdate(5)'>&gt;&gt;</button>
     <button class='btn btn-default btn-round' onclick='stepUpdate(-step-1)'>&gt;|</button>
+    <span id='info'>training step# <span id='step'></span></span>
+
     
   </div>
 </div>
@@ -177,7 +178,6 @@ for(var i=0; i<10; i++){
 
 function computeX(){
   if (dd.cache.x['i'+instance + '_t' + step]){
-    console.log('using cache');
     return dd.cache.x['i'+instance + '_t' + step];
   }else{
     var w = computeW(dd.x[instance], dd.W['layer0'+'_t'+step]);
@@ -189,7 +189,6 @@ function computeX(){
     var x = math.multiply(soft1,w);
     x = x._data[0];
     dd.cache.x['i'+instance + '_t' + step] = x;
-    console.log('cahced');
     return x;
   }
 }
@@ -589,6 +588,7 @@ function play(){
   for(var i=0; i<dd.stepCount-step-1; i++)
     setTimeout(stepUpdate, 500*i);
 }
+play();
 </script>
 </body>
 </html>
